@@ -1,0 +1,108 @@
+Processing ./submodules/depth-diff-gaussian-rasterization
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Processing ./submodules/simple-knn
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Requirement already satisfied: plyfile==0.8.1 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 3)) (0.8.1)
+Requirement already satisfied: tqdm in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 4)) (4.67.1)
+Requirement already satisfied: imageio==2.27.0 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 5)) (2.27.0)
+Requirement already satisfied: opencv-python in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 6)) (4.11.0.86)
+Requirement already satisfied: imageio-ffmpeg in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 7)) (0.6.0)
+Requirement already satisfied: scipy in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 8)) (1.13.1)
+Requirement already satisfied: dearpygui in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 9)) (2.0.0)
+Requirement already satisfied: lpips in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 10)) (0.1.4)
+Requirement already satisfied: scikit-image in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from -r requirements.txt (line 11)) (0.22.0)
+Requirement already satisfied: numpy>=1.17 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from plyfile==0.8.1->-r requirements.txt (line 3)) (1.26.3)
+Requirement already satisfied: pillow>=8.3.2 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from imageio==2.27.0->-r requirements.txt (line 5)) (11.0.0)
+Requirement already satisfied: torch>=0.4.0 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from lpips->-r requirements.txt (line 10)) (2.6.0+cu126)
+Requirement already satisfied: torchvision>=0.2.1 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from lpips->-r requirements.txt (line 10)) (0.21.0+cu126)
+Requirement already satisfied: networkx>=2.8 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from scikit-image->-r requirements.txt (line 11)) (3.2.1)
+Requirement already satisfied: tifffile>=2022.8.12 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from scikit-image->-r requirements.txt (line 11)) (2024.8.30)
+Requirement already satisfied: packaging>=21 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from scikit-image->-r requirements.txt (line 11)) (24.2)
+Requirement already satisfied: lazy_loader>=0.3 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from scikit-image->-r requirements.txt (line 11)) (0.4)
+Requirement already satisfied: filelock in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (3.13.1)
+Requirement already satisfied: typing-extensions>=4.10.0 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (4.12.2)
+Requirement already satisfied: sympy==1.13.1 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (1.13.1)
+Requirement already satisfied: jinja2 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (3.1.4)
+Requirement already satisfied: fsspec in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (2024.6.1)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.6.77 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (12.6.77)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.6.77 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (12.6.77)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.6.80 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (12.6.80)
+Requirement already satisfied: nvidia-cudnn-cu12==9.5.1.17 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (9.5.1.17)
+Requirement already satisfied: nvidia-cublas-cu12==12.6.4.1 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (12.6.4.1)
+Requirement already satisfied: nvidia-cufft-cu12==11.3.0.4 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (11.3.0.4)
+Requirement already satisfied: nvidia-curand-cu12==10.3.7.77 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (10.3.7.77)
+Requirement already satisfied: nvidia-cusolver-cu12==11.7.1.2 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (11.7.1.2)
+Requirement already satisfied: nvidia-cusparse-cu12==12.5.4.2 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (12.5.4.2)
+Requirement already satisfied: nvidia-cusparselt-cu12==0.6.3 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (0.6.3)
+Requirement already satisfied: nvidia-nccl-cu12==2.21.5 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (2.21.5)
+Requirement already satisfied: nvidia-nvtx-cu12==12.6.77 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (12.6.77)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.6.85 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (12.6.85)
+Requirement already satisfied: triton==3.2.0 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from torch>=0.4.0->lpips->-r requirements.txt (line 10)) (3.2.0)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from sympy==1.13.1->torch>=0.4.0->lpips->-r requirements.txt (line 10)) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in /home/shadiman/pytorch-env/lib/python3.9/site-packages (from jinja2->torch>=0.4.0->lpips->-r requirements.txt (line 10)) (2.1.5)
+Building wheels for collected packages: diff_gaussian_rasterization, simple_knn
+  Building wheel for diff_gaussian_rasterization (setup.py): started
+  Building wheel for diff_gaussian_rasterization (setup.py): finished with status 'done'
+  Created wheel for diff_gaussian_rasterization: filename=diff_gaussian_rasterization-0.0.0-cp39-cp39-linux_x86_64.whl size=4476055 sha256=d1701b33a630f955def3ea6cbb3b124067802a5808de61ad8985c4444d9071ee
+  Stored in directory: /home/shadiman/.cache/pip/wheels/c5/59/74/117cfd09979d245060b0f9f9ab8881af999b387382928741e9
+  Building wheel for simple_knn (setup.py): started
+  Building wheel for simple_knn (setup.py): finished with status 'done'
+  Created wheel for simple_knn: filename=simple_knn-0.0.0-cp39-cp39-linux_x86_64.whl size=4183805 sha256=20860fd7c6c87c4fb283a019d775492bb636610e7d101ca5508757145c5208e9
+  Stored in directory: /home/shadiman/.cache/pip/wheels/65/d9/0a/38746e4837c1b42997f0177e5ca4f102a72dabd3b3f6927914
+Successfully built diff_gaussian_rasterization simple_knn
+Installing collected packages: simple_knn, diff_gaussian_rasterization
+  Attempting uninstall: simple_knn
+    Found existing installation: simple_knn 0.0.0
+    Uninstalling simple_knn-0.0.0:
+      Successfully uninstalled simple_knn-0.0.0
+  Attempting uninstall: diff_gaussian_rasterization
+    Found existing installation: diff_gaussian_rasterization 0.0.0
+    Uninstalling diff_gaussian_rasterization-0.0.0:
+      Successfully uninstalled diff_gaussian_rasterization-0.0.0
+Successfully installed diff_gaussian_rasterization-0.0.0 simple_knn-0.0.0
+Processing /home/shadiman/Deformable-3D-Gaussians/submodules/depth-diff-gaussian-rasterization
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Building wheels for collected packages: diff_gaussian_rasterization
+  Building wheel for diff_gaussian_rasterization (setup.py): started
+  Building wheel for diff_gaussian_rasterization (setup.py): finished with status 'done'
+  Created wheel for diff_gaussian_rasterization: filename=diff_gaussian_rasterization-0.0.0-cp39-cp39-linux_x86_64.whl size=4476055 sha256=c8ac806911f16d65d67cc42f6fd9177618b88843ae59de37bb6a7d24815abcc7
+  Stored in directory: /home/shadiman/.cache/pip/wheels/c5/59/74/117cfd09979d245060b0f9f9ab8881af999b387382928741e9
+Successfully built diff_gaussian_rasterization
+Installing collected packages: diff_gaussian_rasterization
+  Attempting uninstall: diff_gaussian_rasterization
+    Found existing installation: diff_gaussian_rasterization 0.0.0
+    Uninstalling diff_gaussian_rasterization-0.0.0:
+      Successfully uninstalled diff_gaussian_rasterization-0.0.0
+Successfully installed diff_gaussian_rasterization-0.0.0
+Processing /home/shadiman/Deformable-3D-Gaussians/submodules/simple-knn
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Building wheels for collected packages: simple_knn
+  Building wheel for simple_knn (setup.py): started
+  Building wheel for simple_knn (setup.py): finished with status 'done'
+  Created wheel for simple_knn: filename=simple_knn-0.0.0-cp39-cp39-linux_x86_64.whl size=4183805 sha256=be88c135291830468af8876d367d45f063374b24172d0970d338c8ebf3389eb6
+  Stored in directory: /home/shadiman/.cache/pip/wheels/65/d9/0a/38746e4837c1b42997f0177e5ca4f102a72dabd3b3f6927914
+Successfully built simple_knn
+Installing collected packages: simple_knn
+  Attempting uninstall: simple_knn
+    Found existing installation: simple_knn 0.0.0
+    Uninstalling simple_knn-0.0.0:
+      Successfully uninstalled simple_knn-0.0.0
+Successfully installed simple_knn-0.0.0
+Setting up [LPIPS] perceptual loss: trunk [vgg], v[0.1], spatial [off]
+Loading model from: /home/shadiman/pytorch-env/lib/python3.9/site-packages/lpips/weights/v0.1/vgg.pth
+
+Scene: output/exp-name-forestonly
+Method: ours_3000
+  SSIM :    0.6732172
+  PSNR :   14.0571928
+  LPIPS:    0.3148365
+
+Method: ours_30000
+  SSIM :    0.9440487
+  PSNR :   24.9635677
+  LPIPS:    0.0439407
+

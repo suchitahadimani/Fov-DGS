@@ -1,0 +1,40 @@
+Optimizing output/exp-name-forestonly
+Output folder: output/exp-name-forestonly [24/04 00:11:14]
+Tensorboard not available: not logging progress [24/04 00:11:14]
+Found transforms_train.json file, assuming Blender data set! [24/04 00:11:14]
+Reading Training Transforms [24/04 00:11:14]
+Reading Test Transforms [24/04 00:11:18]
+Loading Training Cameras [24/04 00:11:19]
+Loading Test Cameras [24/04 00:11:21]
+Number of points at initialisation :  100000 [24/04 00:11:22]
+NUMBER OF DYNAMIC GAUSSIANS 0 [24/04 00:11:49]
+[INFO] Initializing Gaussian Forest... [24/04 00:11:49]
+LEVEL: 1 [24/04 00:11:53]
+LEVEL: 1 [24/04 00:11:53]
+[INFO] Forest initialized: 0 dynamic trees, 38293 static trees. [24/04 00:14:10]
+xyz shape: torch.Size([77711, 3]) is_dynamic shape: torch.Size([77711]) [24/04 00:14:10]
+NUMBER OF DYNAMIC GAUSSIANS 0 [24/04 00:14:15]
+RENDER FOVEATED [24/04 00:14:15]
+Looking for config file in output/exp-name-forestonly/cfg_args
+Config file found: output/exp-name-forestonly/cfg_args
+Rendering output/exp-name-forestonly
+Loading trained model at iteration 30000 [24/04 00:14:39]
+Found transforms_train.json file, assuming Blender data set! [24/04 00:14:39]
+Reading Training Transforms [24/04 00:14:39]
+Reading Test Transforms [24/04 00:14:41]
+Loading Training Cameras [24/04 00:14:42]
+Loading Test Cameras [24/04 00:14:45]
+Setting up [LPIPS] perceptual loss: trunk [vgg], v[0.1], spatial [off]
+Loading model from: /home/shadiman/pytorch-env/lib/python3.9/site-packages/lpips/weights/v0.1/vgg.pth
+
+Scene: output/exp-name-forestonly
+Method: ours_3000
+  SSIM :    0.6732172
+  PSNR :   14.0571928
+  LPIPS:    0.3148365
+
+Method: ours_30000
+  SSIM :    0.9440487
+  PSNR :   24.9635677
+  LPIPS:    0.0439407
+
