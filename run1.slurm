@@ -8,7 +8,7 @@
 #SBATCH --ntasks-per-node=12
 
 #SBATCH --mem=150GB
-#SBATCH --time=0-00:30:00
+#SBATCH --time=0-03:00:00
 
 
 #SBATCH --output=mnist.%j.out
@@ -34,9 +34,9 @@ source ~/pytorch-env/bin/activate
 cd ~/Deformable-3D-Gaussians
 
 ##training on d-nerf
-python train_statictree.py -s ~/data/lego -m output/exp-name-staticforest --eval --is_blender --is_6dof --iterations 30000
+#python train_statictree.py -s ~/data/lego -m output/exp-name-static_forest-2 --eval --is_blender --is_6dof --iterations 3000
 
 ## render and evaluate
-python render.py -m output/exp-name-staticforest --mode render
-python metrics.py -m output/exp-name-staticforest
+python render.py -m output/exp-name-static_forest-2 --mode render
+python metrics.py -m output/exp-name-static_forest-2 
 

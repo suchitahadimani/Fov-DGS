@@ -16,7 +16,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import torch
 from random import randint
 from utils.loss_utils import l1_loss, ssim, kl_divergence
-from gaussian_renderer import render, network_gui, render_foveated
+from gaussian_renderer import render, network_gui, render_foveated, render_foveated_static_only
 import sys
 from scene import Scene, GaussianModel, DeformModel
 from utils.general_utils import safe_state, get_linear_noise_func
@@ -104,30 +104,30 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations):
         if iteration < opt.warm_up:
             d_xyz, d_rotation, d_scaling = 0.0, 0.0, 0.0
 
-        elif iteration == opt.warm_up:
-
-            dynamic_gaussians = gaussians.get_filtered_copy(gaussians._is_dynamic)
-            print("NUMBER OF DYNAMIC GAUSSIANS",dynamic_gaussians.get_xyz.shape[0], flush=True)
-
-            #run_dynamic_static_separation(scene, render, pipe, background)
-            
-
-            # Approximate s_L, f, d for now
-            s_L = 1.0 / 512  # assuming training images are 512x512
-            f = 1.0  # assume normalized camera intrinsics for now
-            d = 1.0  # average depth = 1 as a placeholder
-            L = 2    # number of LOD layers
-            
-            forest = initialize_gaussian_forest(scene.gaussians, s_L, L, f, d)
-            scene.forest = forest  
-
-            print("xyz shape:", gaussians._xyz.shape, "is_dynamic shape:", gaussians._is_dynamic.shape, flush=True)
-            assert gaussians._xyz.shape[0] == gaussians._is_dynamic.shape[0], "Mask size mismatch!"
-
-            scene.gaussians = gaussians 
-
-
-            #dynamic_gaussians = gaussians.get_filtered_copy(gaussians._is_dynamic)
+        #elif iteration == opt.warm_up:
+#
+        #    dynamic_gaussians = gaussians.get_filtered_copy(gaussians._is_dynamic)
+        #    print("NUMBER OF DYNAMIC GAUSSIANS",dynamic_gaussians.get_xyz.shape[0], flush=True)
+#
+        #    #run_dynamic_static_separation(scene, render, pipe, background)
+        #    
+#
+        #    # Approximate s_L, f, d for now
+        #    s_L = 1.0 / 512  # assuming training images are 512x512
+        #    f = 1.0  # assume normalized camera intrinsics for now
+        #    d = 1.0  # average depth = 1 as a placeholder
+        #    L = 4    # number of LOD layers
+        #    
+        #    forest = initialize_gaussian_forest(scene.gaussians, s_L, L, f, d)
+        #    scene.forest = forest  
+#
+        #    print("xyz shape:", gaussians._xyz.shape, "is_dynamic shape:", gaussians._is_dynamic.shape, flush=True)
+        #    assert gaussians._xyz.shape[0] == gaussians._is_dynamic.shape[0], "Mask size mismatch!"
+#
+        #    scene.gaussians = gaussians 
+#
+#
+        #    #dynamic_gaussians = gaussians.get_filtered_copy(gaussians._is_dynamic)
             #if(dynamic_gaussians.get_xyz.shape[0] != 0):
             #    scene.gaussians = dynamic_gaussians
 
@@ -143,14 +143,15 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations):
         # Render
 
         
-        if iteration == opt.warm_up + 100:
-            dynamic_gaussians = gaussians.get_filtered_copy(gaussians._is_dynamic)
-            print("NUMBER OF DYNAMIC GAUSSIANS",dynamic_gaussians.get_xyz.shape[0], flush=True)
-            gaze_point = torch.tensor([viewpoint_cam.image_width // 2, viewpoint_cam.image_height // 2], device='cuda', dtype=torch.float32)
-            render_pkg_re = render_foveated_static_only(viewpoint_cam, gaussians, scene.forest, pipe, background, d_xyz, d_rotation, d_scaling, gaze_point, is_6dof=dataset.is_6dof, L=2, w0=0.1, m=0.2, e0=0.1)
-            print(render_pkg_re, flush = True)
-        else:
-            render_pkg_re = render(viewpoint_cam, gaussians, pipe, background, d_xyz, d_rotation, d_scaling, dataset.is_6dof)
+        #if iteration > opt.warm_up + 100:
+        #    dynamic_gaussians = gaussians.get_filtered_copy(gaussians._is_dynamic)
+        #    print("NUMBER OF DYNAMIC GAUSSIANS",dynamic_gaussians.get_xyz.shape[0], flush=True)
+        #    gaze_point = torch.tensor([viewpoint_cam.image_width // 2, viewpoint_cam.image_height // 2], device='cuda', dtype=torch.float32)
+        #    render_pkg_re = render_foveated_static_only(viewpoint_cam, gaussians, scene.forest, pipe, background, d_xyz, d_rotation, d_scaling, gaze_point, is_6dof=dataset.is_6dof, L=4, w0=0.1, m=0.2, e0=0.1)
+        
+        
+            
+        render_pkg_re = render(viewpoint_cam, gaussians, pipe, background, d_xyz, d_rotation, d_scaling, dataset.is_6dof)
 
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg_re["render"], render_pkg_re[
             "viewspace_points"], render_pkg_re["visibility_filter"], render_pkg_re["radii"]

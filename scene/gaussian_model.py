@@ -228,6 +228,13 @@ class GaussianModel:
 
         self.active_sh_degree = self.max_sh_degree
 
+
+        # after setting self._rotation:
+
+        self._is_dynamic = torch.zeros((self._xyz.shape[0],), dtype=torch.bool, device="cuda")
+        self._semantic_label = -1 * torch.ones((self._xyz.shape[0],), dtype=torch.long, device="cuda")
+
+
     def replace_tensor_to_optimizer(self, tensor, name):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
@@ -393,6 +400,9 @@ class GaussianModel:
         torch.cuda.empty_cache()
 
     def add_densification_stats(self, viewspace_point_tensor, update_filter):
+        if viewspace_point_tensor.grad is None:
+            # If no gradient was computed, just skip updating
+            return
         self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter, :2], dim=-1,
                                                              keepdim=True)
         self.denom[update_filter] += 1
@@ -402,23 +412,33 @@ class GaussianModel:
         filtered = GaussianModel(self.max_sh_degree)
         filtered.active_sh_degree = self.active_sh_degree
 
-        filtered._xyz = self._xyz[mask]
-        filtered._features_dc = self._features_dc[mask]
-        filtered._features_rest = self._features_rest[mask]
-        filtered._scaling = self._scaling[mask]
-        filtered._rotation = self._rotation[mask]
-        filtered._opacity = self._opacity[mask]
-        filtered.max_radii2D = self.max_radii2D[mask]
+        # Safe mask handling
+        if mask.dtype == torch.bool:
+            idx = mask.nonzero(as_tuple=False).squeeze(-1)
+        else:
+            idx = mask  # Assume already indices
 
-        # If dynamic/static labels are set, copy them too
-        if isinstance(self._is_dynamic, torch.Tensor):
-            filtered._is_dynamic = self._is_dynamic[mask]
-        if isinstance(self._semantic_label, torch.Tensor):
-            filtered._semantic_label = self._semantic_label[mask]
+        # Now idx is clean
+        filtered._xyz = self._xyz.index_select(0, idx)
+        filtered._features_dc = self._features_dc.index_select(0, idx)
+        filtered._features_rest = self._features_rest.index_select(0, idx)
+        filtered._scaling = self._scaling.index_select(0, idx)
+        filtered._rotation = self._rotation.index_select(0, idx)
+        filtered._opacity = self._opacity.index_select(0, idx)
 
+        if self.max_radii2D.shape[0] == self._xyz.shape[0]:
+            filtered.max_radii2D = self.max_radii2D.index_select(0, idx)
+        else:
+            filtered.max_radii2D = torch.zeros((filtered._xyz.shape[0],), device=self._xyz.device)
 
+        if isinstance(self._is_dynamic, torch.Tensor) and self._is_dynamic.shape[0] == self._xyz.shape[0]:
+            filtered._is_dynamic = self._is_dynamic.index_select(0, idx)
+        if isinstance(self._semantic_label, torch.Tensor) and self._semantic_label.shape[0] == self._xyz.shape[0]:
+            filtered._semantic_label = self._semantic_label.index_select(0, idx)
 
         return filtered
+
+
     
 
 

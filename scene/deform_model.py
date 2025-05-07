@@ -14,7 +14,7 @@ class DeformModel:
         self.spatial_lr_scale = 5
 
     def step(self, xyz, time_emb):
-        return self.deform(xyz, time_emb)
+        return self.deform(xyz, time_emb.cuda())
 
     def train_setting(self, training_args):
         l = [

@@ -1,0 +1,21 @@
+Looking for config file in output/exp-name-static_forest-2/cfg_args
+Config file found: output/exp-name-static_forest-2/cfg_args
+Rendering output/exp-name-static_forest-2
+Loading trained model at iteration 30000 [02/05 15:23:01]
+Found transforms_train.json file, assuming Blender data set! [02/05 15:23:01]
+Reading Training Transforms [02/05 15:23:01]
+Reading Test Transforms [02/05 15:23:04]
+Loading Training Cameras [02/05 15:23:05]
+Loading Test Cameras [02/05 15:23:08]
+[INFO] Initializing Gaussian Forest... [02/05 15:23:09]
+LEVEL: 3 [02/05 15:23:16]
+LEVEL: 2 [02/05 15:23:16]
+LEVEL: 1 [02/05 15:23:16]
+LEVEL: 3 [02/05 15:23:16]
+LEVEL: 2 [02/05 15:30:53]
+LEVEL: 1 [02/05 15:37:27]
+[INFO] Forest initialized: 0 dynamic trees, 30912 static trees. [02/05 15:39:49]
+Setting up [LPIPS] perceptual loss: trunk [vgg], v[0.1], spatial [off]
+Loading model from: /home/shadiman/pytorch-env/lib/python3.9/site-packages/lpips/weights/v0.1/vgg.pth
+
+Scene: output/exp-name-static_forest-2

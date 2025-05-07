@@ -14,7 +14,7 @@ from scene import Scene, DeformModel
 import os
 from tqdm import tqdm
 from os import makedirs
-from gaussian_renderer import render, render_foveated
+from gaussian_renderer import render, render_foveated, render_foveated_static_only
 import torchvision
 from utils.general_utils import safe_state
 from utils.pose_utils import pose_spherical, render_wander_path
@@ -24,9 +24,11 @@ from gaussian_renderer import GaussianModel
 import imageio
 import numpy as np
 import time
+from scene.gaussian_forest import initialize_gaussian_forest
+from utils.dynamic_separation import run_dynamic_static_separation
 
 
-def render_set(model_path, load2gpu_on_the_fly, is_6dof, name, iteration, views, gaussians, pipeline, background, deform):
+def render_set(model_path, load2gpu_on_the_fly, is_6dof, name, iteration, views, gaussians, pipeline, background, deform,forest):
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
     gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
     depth_path = os.path.join(model_path, name, "ours_{}".format(iteration), "depth")
@@ -43,17 +45,32 @@ def render_set(model_path, load2gpu_on_the_fly, is_6dof, name, iteration, views,
         fid = view.fid
         xyz = gaussians.get_xyz
         time_input = fid.unsqueeze(0).expand(xyz.shape[0], -1)
-        d_xyz, d_rotation, d_scaling = deform.step(xyz.detach(), time_input)
+        #d_xyz, d_rotation, d_scaling = deform.step(xyz.detach(), time_input)
+        dynamic_mask = gaussians._is_dynamic  # Bool tensor: [N]
+        dynamic_xyz = xyz[dynamic_mask]
+        time_input_dynamic = fid.unsqueeze(0).expand(dynamic_xyz.shape[0], -1)
+
+        # Only deform dynamic Gaussians
+        d_xyz_dyn, d_rotation_dyn, d_scaling_dyn = deform.step(dynamic_xyz.detach(), time_input_dynamic)
+
+        # For static Gaussians, set 0
+        d_xyz = torch.zeros_like(xyz)
+        d_rotation = torch.zeros((xyz.shape[0], 3), device=xyz.device)
+        d_scaling = torch.zeros((xyz.shape[0], 3), device=xyz.device)
+
+
         
         #results = render(view, gaussians, pipeline, background, d_xyz, d_rotation, d_scaling, is_6dof)
         #rendering = results["render"]
+
+        #gaze_point = torch.tensor([view.image_width // 2, view.image_height // 2], device='cuda', dtype=torch.float32)
         
         
         # Example hard-coded center gaze for testing
         gaze_point = torch.tensor([view.image_width // 2, view.image_height // 2], device='cuda', dtype=torch.float32)
 
-        results = render_foveated(view, gaussians, pipeline, background, d_xyz, d_rotation, d_scaling,
-                                gaze_point, is_6dof=is_6dof, L=4, w0=0.1, m=0.2, e0=0.1)
+        results = render_foveated_static_only(view, gaussians, forest, pipeline, background, d_xyz, d_rotation, d_scaling, gaze_point, is_6dof=is_6dof, L=4, w0=1/48, m=1.32, e0=0.1)
+        #render_foveated_static_only(viewpoint_cam, gaussians, scene.forest, pipe, background, d_xyz, d_rotation, d_scaling, gaze_point, is_6dof=dataset.is_6dof, L=2, w0=0.1, m=0.2, e0=0.1)
         rendering = results["render"]
 
         
@@ -314,9 +331,21 @@ def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, 
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
         deform = DeformModel(dataset.is_blender, dataset.is_6dof)
         deform.load_weights(dataset.model_path)
+        deform.deform = deform.deform.cuda()
+        
 
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+        #run_dynamic_static_separation(scene, render, pipeline, background)
+
+        # Approximate s_L, f, d for now for inference (same as training)
+        s_L = 1.0 / 512  # Assuming training images are 512x512
+        f = 1.0          # Assume normalized camera intrinsics
+        d = 1.0          # Approximate average depth
+        L = 4            # Number of forest LOD layers
+
+        scene.forest = initialize_gaussian_forest(scene.gaussians, s_L, L, f, d)
+
 
         if mode == "render":
             render_func = render_set
@@ -334,12 +363,12 @@ def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, 
         if not skip_train:
             render_func(dataset.model_path, dataset.load2gpu_on_the_fly, dataset.is_6dof, "train", scene.loaded_iter,
                         scene.getTrainCameras(), gaussians, pipeline,
-                        background, deform)
+                        background, deform, scene.forest)
 
         if not skip_test:
             render_func(dataset.model_path, dataset.load2gpu_on_the_fly, dataset.is_6dof, "test", scene.loaded_iter,
                         scene.getTestCameras(), gaussians, pipeline,
-                        background, deform)
+                        background, deform, scene.forest)
 
 
 if __name__ == "__main__":

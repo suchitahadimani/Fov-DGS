@@ -345,7 +345,7 @@ def render_foveated(viewpoint_camera, pc, forest, pipe, bg_color, d_xyz, d_rotat
             try:
                 results = render(viewpoint_camera, pc_l, pipe, bg_color, d_xyz_full, dr_all, ds_all, is_6dof, scaling_modifier)
                 rendered = results["render"]
-                all_radii[all_indices] = results["radii"]
+                all_radii[all_indices] = results["radii"].to(torch.int)
                 all_visibility[all_indices] = results["visibility_filter"]
                 screenspace_points_all[all_indices] = results["viewspace_points"]
                 screenspace_points_densify_all[all_indices] = results["viewspace_points_densify"]
@@ -374,23 +374,26 @@ def render_foveated(viewpoint_camera, pc, forest, pipe, bg_color, d_xyz, d_rotat
         "depth": depth_map
     }
 
-def render_foveated_static_only(viewpoint_camera, pc, forest, pipe, bg_color, gaze_point,
-                                scaling_modifier=1.0, L=2, w0=1/48, m=1.32, e0=0.1, k=0.4,
-                                saliency_map=None):
-    print("RENDER FOVEATED (STATIC ONLY)", flush=True)
+
+            
+
+
+def render_foveated_static_only(viewpoint_camera, pc, forest, pipe, bg_color, d_xyz, d_rotation, d_scaling, gaze_point,
+                    is_6dof=False, scaling_modifier=1.0, override_color=None, L=4, w0=1/48, m=1.32, e0=0.1, k=0.4,
+                    saliency_map=None):
+    #print("RENDER STATIC FOVEATED", flush=True)
     device = pc.get_xyz.device
     H, W = viewpoint_camera.image_height, viewpoint_camera.image_width
     image_size = torch.tensor([W, H], device=device)
 
     rendered = None
-    all_radii = torch.zeros((pc.get_xyz.shape[0]), device=device)
+    all_radii = torch.zeros((pc.get_xyz.shape[0]), device=device, dtype=torch.int32)
     all_visibility = torch.zeros((pc.get_xyz.shape[0]), dtype=torch.bool, device=device)
-    screenspace_points_all = torch.zeros_like(pc.get_xyz, device=device)
-    screenspace_points_densify_all = torch.zeros_like(pc.get_xyz, device=device)
+    screenspace_points_all = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, device=device)
+    screenspace_points_densify_all = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, device=device)
     depth_map = torch.zeros((H, W), device=device)
 
     indices_layers = []
-
     static_forest = [tree for tree in forest if all(not n.Dyn for n in tree)]
 
     def get_projected_mu(indices_tensor):
@@ -401,10 +404,10 @@ def render_foveated_static_only(viewpoint_camera, pc, forest, pipe, bg_color, ga
         )[indices_tensor]
         return projected_2d.mean(dim=0)  # 2D center of the tree
 
+    # ---------- STATIC FOREST (Only CSF selection) ----------
     for tree in static_forest:
         if not tree:
             continue
-
         indices = [n.index for n in tree if 0 <= n.index < pc.get_xyz.shape[0]]
         if not indices:
             continue
@@ -425,21 +428,82 @@ def render_foveated_static_only(viewpoint_camera, pc, forest, pipe, bg_color, ga
             if not final_indices:
                 continue
             final_tensor = torch.tensor(final_indices, device=device)
-            indices_layers.append(final_tensor)
+            # No deformation for static
+            dx = dr = ds = 0
+            indices_layers.append((final_tensor, dx, dr, ds))
 
-    # Combine and render
+    # ---------- Final Batched Render ----------
     if indices_layers:
-        all_indices = torch.cat(indices_layers, dim=0)
+        all_indices = torch.cat([x[0] for x in indices_layers], dim=0)
         valid_mask = (all_indices >= 0) & (all_indices < pc.get_xyz.shape[0])
-        all_indices = all_indices[valid_mask]
+        if not valid_mask.all():
+            print("[WARNING] Some indices were out-of-bounds, skipping them.")
+            all_indices = all_indices[valid_mask]
 
+
+        #if all_indices.numel() > 0:
+        #    pc_l = pc.get_filtered_copy(all_indices)
+        #    d_xyz = d_xyz[all_indices]
+        #    d_rotation = d_rotation[all_indices]
+        #    d_scaling = d_scaling[all_indices]
+#
+        #    dx_all = torch.cat([x[1] if isinstance(x[1], torch.Tensor) else torch.zeros((x[0].shape[0], 3), device=device) for x in indices_layers], dim=0)
+        #    #dr_all = torch.cat([x[2] if isinstance(x[2], torch.Tensor) else torch.zeros((x[0].shape[0], 3), device=device) for x in indices_layers], dim=0)
+        #    ds_all = torch.cat([x[3] if isinstance(x[3], torch.Tensor) else torch.zeros((x[0].shape[0], 3), device=device) for x in indices_layers], dim=0)
+        #    dr_axis_angle = torch.cat([
+        #        x[2] if isinstance(x[2], torch.Tensor) else torch.zeros((x[0].shape[0], 3), device=device)
+        #        for x in indices_layers
+        #    ], dim=0)  # [N, 3]
+#
+        #    # Convert to numpy
+        #    dr_np = dr_axis_angle.detach().cpu().numpy()
+#
+        #    # Axis-angle → quaternion (scipy returns [x, y, z, w])
+        #    quats_xyzw = R.from_rotvec(dr_np).as_quat()  # [N, 4]
+#
+        #    # Reorder to [w, x, y, z]
+        #    quats_wxyz = np.concatenate([quats_xyzw[:, 3:4], quats_xyzw[:, 0:3]], axis=1)
+#
+        #    # Back to torch
+        #    dr_all = torch.tensor(quats_wxyz, dtype=torch.float32, device=device)
+        
         if all_indices.numel() > 0:
             pc_l = pc.get_filtered_copy(all_indices)
-            zeros = torch.zeros_like(pc_l.get_xyz)
+
+            # Set static deformation to ZERO
+            N = all_indices.shape[0]
+            d_xyz = torch.zeros((N, 3), device=device)
+            d_rotation = torch.zeros((N, 3), device=device)
+            d_scaling = torch.zeros((N, 3), device=device)
+
+            dx_all = torch.cat([torch.zeros((x[0].shape[0], 3), device=device) for x in indices_layers], dim=0)
+            ds_all = torch.cat([torch.zeros((x[0].shape[0], 3), device=device) for x in indices_layers], dim=0)
+            dr_axis_angle = torch.cat([torch.zeros((x[0].shape[0], 3), device=device) for x in indices_layers], dim=0)
+
+            # Convert to quaternion
+            quats_wxyz = np.zeros((dr_axis_angle.shape[0], 4), dtype=np.float32)
+            quats_wxyz[:, 0] = 1.0  # Identity rotation w=1
+
+            dr_all = torch.tensor(quats_wxyz, dtype=torch.float32, device=device)
+
+
+
+            if is_6dof:
+                N = dx_all.shape[0]
+                d_xyz_full = torch.eye(4, device=device).unsqueeze(0).repeat(N, 1, 1)
+                d_xyz_full[:, :3, 3] = dx_all
+                d_xyz_full[:, 0, 0] *= (1.0 + ds_all[:, 0])
+                d_xyz_full[:, 1, 1] *= (1.0 + ds_all[:, 1])
+                d_xyz_full[:, 2, 2] *= (1.0 + ds_all[:, 2])
+            else:
+                d_xyz_full = dx_all
+            
+
 
             try:
-                results = render(viewpoint_camera, pc_l, pipe, bg_color, zeros, zeros, zeros,
-                                 is_6dof=False, scaling_modifier=scaling_modifier)
+                #xyz_to_render = pc_l.get_xyz[all_indices].detach().cpu().numpy()
+                #np.save("foveated_xyz.npy", xyz_to_render)
+                results = render(viewpoint_camera, pc_l, pipe, bg_color, d_xyz_full, dr_all, ds_all, is_6dof, scaling_modifier)
 
                 rendered = results["render"]
                 all_radii[all_indices] = results["radii"]
@@ -448,195 +512,9 @@ def render_foveated_static_only(viewpoint_camera, pc, forest, pipe, bg_color, ga
                 screenspace_points_densify_all[all_indices] = results["viewspace_points_densify"]
                 depth_map = torch.maximum(depth_map, results["depth"])
             except torch.cuda.OutOfMemoryError:
-                print(f"[OOM] Failed to render {all_indices.shape[0]} points", flush=True)
+                print(f"[OOM] Combined render OOM for {all_indices.shape[0]} points", flush=True)
                 rendered = None
 
-    if rendered is None:
-        print("[WARNING] No Gaussians rendered, using black image.")
-        rendered = torch.zeros((3, H, W), device=device)
-
-    return {
-        "render": rendered,
-        "viewspace_points": screenspace_points_all,
-        "viewspace_points_densify": screenspace_points_densify_all,
-        "visibility_filter": all_visibility,
-        "radii": all_radii,
-        "depth": depth_map
-    }
-
-'''
-def render_foveated(viewpoint_camera, pc, forest, pipe, bg_color, d_xyz, d_rotation, d_scaling, gaze_point,
-                    is_6dof=False, scaling_modifier=1.0, override_color=None, L=2, w0=1/48, m=1.32, e0=0.1, k=0.4,
-                    saliency_map=None):
-    print("RENDER FOVEATED", flush=True)
-    device = pc.get_xyz.device
-    H, W = viewpoint_camera.image_height, viewpoint_camera.image_width
-    image_size = torch.tensor([W, H], device=device)
-    MAX_BATCH_SIZE = 10000
-
-    rendered = None
-    N = pc.get_xyz.shape[0]
-    all_radii = torch.zeros((N,), device=device)
-    all_visibility = torch.zeros((N,), dtype=torch.bool, device=device)
-    screenspace_points_all = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, device=device)
-    screenspace_points_densify_all = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, device=device)
-    depth_map = torch.zeros((H, W), device=device)
-
-    batch_indices = []
-    batch_dynamics = []
-
-    def render_batch(indices, dynamics):
-        nonlocal rendered, all_radii, all_visibility, screenspace_points_all, screenspace_points_densify_all, depth_map
-
-        indices_tensor = torch.tensor(indices, device=device)
-        pc_l = pc.get_filtered_copy(indices_tensor)
-        if pc_l.get_xyz.shape[0] == 0:
-            return
-
-        is_dynamic = any(dynamics)
-        dx = d_xyz[indices_tensor] if is_dynamic and d_xyz is not None else 0
-        dr = d_rotation[indices_tensor] if is_dynamic and d_rotation is not None else 0
-        ds = d_scaling[indices_tensor] if is_dynamic and d_scaling is not None else 0
-
-        try:
-            results = render(viewpoint_camera, pc_l, pipe, bg_color, dx, dr, ds, is_6dof, scaling_modifier)
-
-            if rendered is None:
-                rendered = results["render"]
-            else:
-                rendered = rendered + results["render"].detach()
-
-            all_radii[indices_tensor] = results["radii"].to(all_radii.dtype)
-            all_visibility[indices_tensor] = results["visibility_filter"].to(all_visibility.dtype)
-            screenspace_points_all[indices_tensor] = results["viewspace_points"].to(screenspace_points_all.dtype)
-            screenspace_points_densify_all[indices_tensor] = results["viewspace_points_densify"].to(
-                screenspace_points_densify_all.dtype)
-            depth_map = torch.maximum(depth_map, results["depth"])
-
-            del results, pc_l, dx, dr, ds
-            torch.cuda.empty_cache()
-
-        except torch.cuda.OutOfMemoryError:
-            print(f"[OOM] Skipping chunk of {len(indices)} points", flush=True)
-            torch.cuda.empty_cache()
-
-    # === Batch all nodes from the forest ===
-    for tree in forest:
-        for node in tree:
-            if 0 <= node.index < N:
-                batch_indices.append(node.index)
-                batch_dynamics.append(node.Dyn)
-
-            if len(batch_indices) >= MAX_BATCH_SIZE:
-                render_batch(batch_indices, batch_dynamics)
-                batch_indices.clear()
-                batch_dynamics.clear()
-
-    # Render any remaining nodes
-    if batch_indices:
-        render_batch(batch_indices, batch_dynamics)
-
-    print("RENDERING DONE", flush=True)
-
-    if rendered is None:
-        print("[WARNING] No Gaussians rendered, using default black image.")
-        rendered = torch.zeros((3, H, W), device=device)
-
-    return {
-        "render": rendered,
-        "viewspace_points": screenspace_points_all,
-        "viewspace_points_densify": screenspace_points_densify_all,
-        "visibility_filter": all_visibility,
-        "radii": all_radii,
-        "depth": depth_map
-    }
-
-
-
-
-def render_foveated(viewpoint_camera, pc, forest, pipe, bg_color, d_xyz, d_rotation, d_scaling, gaze_point,
-                    is_6dof=False, scaling_modifier=1.0, override_color=None, L=2, w0=1/48, m=1.32, e0=0.1, k=0.4,
-                    saliency_map=None):
-    print("RENDER FOVEATED", flush=True)
-    device = pc.get_xyz.device
-    H, W = viewpoint_camera.image_height, viewpoint_camera.image_width
-    image_size = torch.tensor([W, H], device=device)
-    MAX_BATCH_SIZE = 5000
-
-    rendered = None
-    all_radii = torch.zeros((pc.get_xyz.shape[0]), device=device)
-    all_visibility = torch.zeros((pc.get_xyz.shape[0]), dtype=torch.bool, device=device)
-    screenspace_points_all = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, device=device)
-    screenspace_points_densify_all = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, device=device)
-    depth_map = torch.zeros((H, W), device=device)
-
-    dynamic_forest = [tree for tree in forest if any(n.Dyn for n in tree)]
-    static_forest = [tree for tree in forest if all(not n.Dyn for n in tree)]
-
-    for tree in dynamic_forest + static_forest:
-        if not tree:
-            continue
-
-        is_dynamic = any(n.Dyn for n in tree)
-        indices = [n.index for n in tree if 0 <= n.index < pc.get_xyz.shape[0]]
-
-        if not indices:
-            continue
-
-        indices_tensor = torch.tensor(indices, device=device)
-
-        # Compute eccentricity to determine foveated LOD (optional, could remove if not needed)
-        projected_2d = pc.get_projected_2d(
-            viewpoint_camera.world_view_transform,
-            viewpoint_camera.full_proj_transform,
-            viewpoint_camera.image_width,
-            viewpoint_camera.image_height
-        )[indices_tensor]
-
-        mu = projected_2d.mean(dim=0)
-        e = compute_eccentricity(gaze_point, mu.unsqueeze(0), image_size).item()
-        acuity = compute_acuity(w0, m, e)
-        fovea_layer = compute_layer(L, acuity, w0, m, e0).item()
-        fovea_layer = torch.clamp(torch.tensor(fovea_layer, dtype=torch.float32), 0, L - 1).long().item()
-
-        # (Optional) skip trees with far LODs
-        # if fovea_layer > X: continue
-
-        for chunk in torch.split(indices_tensor, MAX_BATCH_SIZE):
-            pc_l = pc.get_filtered_copy(chunk)
-            if pc_l.get_xyz.shape[0] == 0:
-                continue
-
-            if is_dynamic:
-                dx = d_xyz[chunk] if d_xyz is not None else 0
-                dr = d_rotation[chunk] if d_rotation is not None else 0
-                ds = d_scaling[chunk] if d_scaling is not None else 0
-            else:
-                dx = dr = ds = 0
-
-            try:
-                results = render(viewpoint_camera, pc_l, pipe, bg_color, dx, dr, ds, is_6dof, scaling_modifier)
-
-                if rendered is None:
-                    rendered = results["render"]
-                else:
-                    rendered += results["render"].detach()
-
-                all_radii[chunk] = results["radii"].to(all_radii.dtype)
-                all_visibility[chunk] = results["visibility_filter"].to(all_visibility.dtype)
-                screenspace_points_all[chunk] = results["viewspace_points"].to(screenspace_points_all.dtype)
-                screenspace_points_densify_all[chunk] = results["viewspace_points_densify"].to(
-                    screenspace_points_densify_all.dtype)
-                depth_map = torch.maximum(depth_map, results["depth"])
-
-                del results, pc_l, dx, dr, ds
-                torch.cuda.empty_cache()
-
-            except torch.cuda.OutOfMemoryError:
-                print(f"[OOM] Skipping chunk of {chunk.shape[0]} points from tree with {len(indices)} points", flush=True)
-                torch.cuda.empty_cache()
-                continue
-
     print("RENDERING DONE", flush=True)
 
     if rendered is None:
@@ -645,9 +523,10 @@ def render_foveated(viewpoint_camera, pc, forest, pipe, bg_color, d_xyz, d_rotat
         screenspace_points_all = torch.zeros((pc.get_xyz.shape[0], 3), device=device)
         screenspace_points_densify_all = torch.zeros((pc.get_xyz.shape[0], 3), device=device)
         all_visibility = torch.zeros((pc.get_xyz.shape[0]), dtype=torch.bool, device=device)
-        all_radii = torch.zeros((pc.get_xyz.shape[0]), device=device)
+        all_radii = torch.zeros((pc.get_xyz.shape[0]), dtype=torch.float32,device=device)
         depth_map = torch.zeros((H, W), device=device)
-
+    
+    rendered.requires_grad_(True)
     return {
         "render": rendered,
         "viewspace_points": screenspace_points_all,
@@ -657,130 +536,3 @@ def render_foveated(viewpoint_camera, pc, forest, pipe, bg_color, d_xyz, d_rotat
         "depth": depth_map
     }
 
-
-
-def render_foveated(viewpoint_camera, pc, forest, pipe, bg_color, d_xyz, d_rotation, d_scaling, gaze_point, is_6dof=False, scaling_modifier=1.0, override_color=None, L=2, w0=1/48, m=1.32, e0=0.1, k=0.4, saliency_map=None):
-    print("RENDER FOVEATED", flush=True)
-    device = pc.get_xyz.device
-    H, W = viewpoint_camera.image_height, viewpoint_camera.image_width
-    image_size = torch.tensor([W, H], device=device)
-
-    rendered = None
-    all_radii = torch.zeros((pc.get_xyz.shape[0]), device=device)
-    all_visibility = torch.zeros((pc.get_xyz.shape[0]), dtype=torch.bool, device=device)
-    screenspace_points_all = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, device=device)
-    screenspace_points_densify_all = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, device=device)
-    depth_map = torch.zeros((H, W), device=device)
-
-    dynamic_forest = [tree for tree in forest if any(n.Dyn for n in tree)]
-    static_forest = [tree for tree in forest if all(not n.Dyn for n in tree)]
-
-    for tree in dynamic_forest + static_forest:
-        if not tree:
-            continue
-        
-
-        is_dynamic = any(n.Dyn for n in tree)
-        nodes = torch.tensor([n.index for n in tree], device=device)
-        if torch.any(nodes >= pc.get_xyz.shape[0]) or torch.any(nodes < 0):
-            print(f"[WARNING] Skipping tree with invalid node indices: max={nodes.max().item()}, min={nodes.min().item()}, total={len(nodes)}", flush=True)
-            continue
-
-        projected_2d = pc.get_projected_2d(
-            viewpoint_camera.world_view_transform,
-            viewpoint_camera.full_proj_transform,
-            viewpoint_camera.image_width,
-            viewpoint_camera.image_height
-        )[nodes]
-
-        mu = projected_2d.mean(dim=0)
-        e = compute_eccentricity(gaze_point, mu.unsqueeze(0), image_size).item()
-        acuity = compute_acuity(w0, m, e)
-        l1 = compute_layer(L, acuity, w0, m, e0).item()
-        l1 = torch.clamp(torch.tensor(l1, dtype=torch.float32), 0, L - 1).long().item()
-
-        layers_to_render = [l1] if l1 == L - 1 else [l1, l1 + 1]
-
-        for l in layers_to_render:
-            
-            indices = [n.index for n in tree if n.layer == l]
-            #print(f"[Layer {l}] Rendering {len(indices)} points in tree {tree} of size {len(tree)}", flush=True)
-            if not indices:
-                continue
-
-            indices_tensor = torch.tensor(indices, device=device)
-            pc_l = pc.get_filtered_copy(indices_tensor)
-
-            if pc_l.get_xyz.shape[0] == 0:
-                continue
-            if pc_l.get_xyz.shape[0] > 100000:
-                continue
-
-            if is_dynamic:
-                dx = d_xyz[indices_tensor] if d_xyz is not None else 0
-                dr = d_rotation[indices_tensor] if d_rotation is not None else 0
-                ds = d_scaling[indices_tensor] if d_scaling is not None else 0
-            else:
-                dx = dr = ds = 0
-
-
-            results = render(viewpoint_camera, pc_l, pipe, bg_color, dx, dr, ds, is_6dof, scaling_modifier)
-
-            if rendered is None:
-                rendered = results["render"]
-            else:
-                rendered = rendered + results["render"]
-
-            global_idx = indices_tensor
-            all_radii[global_idx] = results["radii"].to(all_radii.dtype)
-            all_visibility[global_idx] = results["visibility_filter"].to(all_visibility.dtype)
-            screenspace_points_all[global_idx] = results["viewspace_points"].to(screenspace_points_all.dtype)
-            screenspace_points_densify_all[global_idx] = results["viewspace_points_densify"].to(screenspace_points_densify_all.dtype)
-
-            depth_map = torch.maximum(depth_map, results["depth"])
-            torch.cuda.empty_cache()
-            del results
-
-
-    print("RENDERING DONE", flush=True)
-    print(torch.cuda.memory_summary(device="cuda"), flush = True)
-
-
-    if rendered is None:
-        print("[WARNING] No Gaussians rendered, using default black image.")
-        rendered = torch.zeros((3, H, W), device=device)
-
-        screenspace_points_all = torch.zeros((pc.get_xyz.shape[0], 3), device=device)
-        screenspace_points_densify_all = torch.zeros((pc.get_xyz.shape[0], 3), device=device)
-        all_visibility = torch.zeros((pc.get_xyz.shape[0]), dtype=torch.bool, device=device)
-        all_radii = torch.zeros((pc.get_xyz.shape[0]), device=device)
-        depth_map = torch.zeros((H, W), device=device)
-
-    return {
-        "render": rendered,
-        "viewspace_points": screenspace_points_all,
-        "viewspace_points_densify": screenspace_points_densify_all,
-        "visibility_filter": all_visibility,
-        "radii": all_radii,
-        "depth": depth_map
-    }
-
-
-
-'''
-
-#if saliency_map is not None and l == l1 + 1:
-#    cov2d = pc.get_covariance()[indices_tensor]
-#    f_val = compute_f_from_csf(acuity, sal, k)
-#    for i, idx in enumerate(indices_tensor):
-#        sigma_2d = cov2d[i][:2, :2]
-#        kernel = create_gaussian_filter(sigma_2d, f_val, (9, 9))
-#        kernel = kernel.to(results["render"].device)
-#        kernel = kernel.unsqueeze(0).unsqueeze(0)
-#        kernel = kernel.expand(3, 1, *kernel.shape[-2:])
-#        render_tensor = results["render"].unsqueeze(0)
-#        results["render"] = F.conv2d(render_tensor, kernel, padding=kernel.shape[-1] // 2, groups=3).squeeze(0)
-#if saliency_map is not None:
-#    mu_pix = mu.long()
-#    sal = saliency_map[mu_pix[1], mu_pix[0]].item()
-#    f = compute_f_from_csf(acuity, sal, k)

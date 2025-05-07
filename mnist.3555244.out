@@ -1,0 +1,22 @@
+Looking for config file in output/exp-name-static_forest-butseparated/cfg_args
+Config file found: output/exp-name-static_forest-butseparated/cfg_args
+Rendering output/exp-name-static_forest-butseparated
+Loading trained model at iteration 30000 [02/05 07:11:44]
+Found transforms_train.json file, assuming Blender data set! [02/05 07:11:44]
+Reading Training Transforms [02/05 07:11:44]
+Reading Test Transforms [02/05 07:11:47]
+Loading Training Cameras [02/05 07:11:47]
+Loading Test Cameras [02/05 07:11:50]
+[INFO] Running dynamic-static separation (fovea-based)... [02/05 07:11:51]
+[INFO] Initializing Gaussian Forest... [02/05 07:11:52]
+LEVEL: 3 [02/05 07:11:59]
+LEVEL: 2 [02/05 07:12:10]
+LEVEL: 1 [02/05 07:12:18]
+LEVEL: 3 [02/05 07:12:22]
+LEVEL: 2 [02/05 07:17:46]
+LEVEL: 1 [02/05 07:22:40]
+[INFO] Forest initialized: 4325 dynamic trees, 26619 static trees. [02/05 07:24:26]
+Setting up [LPIPS] perceptual loss: trunk [vgg], v[0.1], spatial [off]
+Loading model from: /home/shadiman/pytorch-env/lib/python3.9/site-packages/lpips/weights/v0.1/vgg.pth
+
+Scene: output/exp-name-static_forest-butseparated

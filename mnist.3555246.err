@@ -1,0 +1,33 @@
+Rendering progress:   0%|          | 0/50 [00:00<?, ?it/s]Rendering progress:   0%|          | 0/50 [00:13<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/shadiman/Deformable-3D-Gaussians/render.py", line 377, in <module>
+    safe_state(args.quiet)
+  File "/home/shadiman/Deformable-3D-Gaussians/render.py", line 351, in render_sets
+    
+  File "/home/shadiman/Deformable-3D-Gaussians/render.py", line 59, in render_set
+    gaze_point = torch.tensor([view.image_width // 2, view.image_height // 2], device='cuda', dtype=torch.float32)
+  File "/home/shadiman/Deformable-3D-Gaussians/gaussian_renderer/__init__.py", line 486, in render_foveated_static_only
+    results = render(viewpoint_camera, pc_l, pipe, bg_color, d_xyz_full, dr_all, ds_all, is_6dof, scaling_modifier)
+  File "/home/shadiman/Deformable-3D-Gaussians/gaussian_renderer/__init__.py", line 109, in render
+    rendered_image, radii, depth = rasterizer(
+  File "/home/shadiman/pytorch-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/shadiman/pytorch-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/shadiman/pytorch-env/lib/python3.9/site-packages/diff_gaussian_rasterization/__init__.py", line 217, in forward
+    return rasterize_gaussians(
+  File "/home/shadiman/pytorch-env/lib/python3.9/site-packages/diff_gaussian_rasterization/__init__.py", line 33, in rasterize_gaussians
+    return _RasterizeGaussians.apply(
+  File "/home/shadiman/pytorch-env/lib/python3.9/site-packages/torch/autograd/function.py", line 575, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+  File "/home/shadiman/pytorch-env/lib/python3.9/site-packages/diff_gaussian_rasterization/__init__.py", line 95, in forward
+    num_rendered, color, depth, radii, geomBuffer, binningBuffer, imgBuffer = _C.rasterize_gaussians(*args)
+RuntimeError: CUDA error: an illegal memory access was encountered
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+/home/shadiman/pytorch-env/lib/python3.9/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/shadiman/pytorch-env/lib/python3.9/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=VGG16_Weights.IMAGENET1K_V1`. You can also use `weights=VGG16_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
